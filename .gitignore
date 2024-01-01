@@ -6,3 +6,4 @@ crawl/.env
 .ipynb_checkpoints
 experiments
 *.pth
+**/__pycache__/
