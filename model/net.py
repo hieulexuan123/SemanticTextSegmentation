@@ -1,16 +1,28 @@
+import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from torchcrf import CRF
 
 
-class Net(nn.Module):
-    def __init__(self, params):
-        super(Net, self).__init__()
-        self.lstm = nn.LSTM(input_size=768, hidden_size=params['hidden_dim'], num_layers=params['num_layers'],
-                            dropout=params['dropout'], bidirectional=True, batch_first=True)
-        self.fc = nn.Linear(2 * params['hidden_dim'], 2)
+class LSTM_CRF_Model(nn.Module):
+    def __init__(self, embedding_dim=768, hidden_dim=200, num_tags=2, num_layers=4, dropout=0.5):
+        super(LSTM_CRF_Model, self).__init__()
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2,
+                            num_layers=num_layers, bidirectional=True, dropout=dropout)
+        self.hidden2tag = nn.Linear(hidden_dim, num_tags)
+        self.crf = CRF(num_tags, batch_first=True)
 
-    def forward(self, x):
-        out, _ = self.lstm(x)
-        fc_out = self.fc(out.reshape(-1, out.shape[2]))
-        return F.log_softmax(fc_out, dim=1) #batch_size*seq_len x 2
+    def forward(self, embeds):
+        # embeds: (batch_size, seq_len, embedding_dim)
+        lstm_out, _ = self.lstm(embeds)
+        # lstm_out: (batch_size, seq_len, hidden_dim)
+        lstm_feats = self.hidden2tag(lstm_out)
+        # lstm_feats: (batch_size, seq_len, num_tags)
+        return lstm_feats
 
+    def loss(self, feats, tags, mask=None):
+        # tags: (batch_size, seq_len)
+        # mask: (batch_size, seq_len)
+        return -self.crf(feats, tags, mask)
+
+    def predict(self, feats, mask=None):
+        return self.crf.decode(feats, mask)

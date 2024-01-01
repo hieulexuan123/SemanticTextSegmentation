@@ -19,7 +19,7 @@ class ArticleDataset(Dataset):
 
     def load_data(self, file_path):
         data = []
-        model = SentenceTransformer('keepitreal/vietnamese-sbert')
+        model = SentenceTransformer('bkai-foundation-models/vietnamese-bi-encoder')
 
         with open(file_path, 'r', encoding='utf-8') as f:
             articles = json.loads(f.read())
@@ -35,9 +35,13 @@ def collate_fn(batch):
     embeddings, labels = zip(*batch)
     # Pad the embeddings
     padded_embeddings = pad_sequence([torch.tensor(e) for e in embeddings], batch_first=True, padding_value=0.0)
-    # Pad the labels, assuming -1 is a padding value that will be ignored in loss calculation
-    padded_labels = pad_sequence([torch.tensor(l) for l in labels], batch_first=True, padding_value=-1)
-    return padded_embeddings, padded_labels
+    # Pad the labels
+    padded_labels = pad_sequence([torch.tensor(l) for l in labels], batch_first=True, padding_value=0)
+    # Create the masks
+    masks = torch.zeros_like(padded_labels, dtype=torch.bool)
+    for i, length in enumerate([len(l) for l in labels]):
+        masks[i, :length] = 1  # Mark the actual label positions as True
+    return padded_embeddings, padded_labels, masks
 
 
 def get_data_loader(mode, batch_size, shuffle):

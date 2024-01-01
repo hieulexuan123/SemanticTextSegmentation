@@ -3,8 +3,8 @@ import random
 import json
 
 folder_path = '../crawl/final_data/small'
-train_size = 0.7
-val_size = 0.15
+train_size = 0.8
+val_size = 0.1
 
 file_names = os.listdir(folder_path)
 total_size = len(file_names)

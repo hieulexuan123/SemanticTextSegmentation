@@ -1,4 +1,7 @@
-crawl
+crawl/final_data
+crawl/raw_data
+crawl/segmented_data
+crawl/.env
 .idea
 .ipynb_checkpoints
 experiments

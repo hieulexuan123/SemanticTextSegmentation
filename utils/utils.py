@@ -1,41 +1,27 @@
 import os
-import shutil
-
 import torch
 
-def save_checkpoint(state, is_best, checkpoint):
-    """Saves model and training parameters at checkpoint + 'last.pth.tar'. If is_best==True, also saves
-    checkpoint + 'best.pth.tar'
 
-    Args:
-        state: (dict) contains model's state_dict, may contain other keys such as epoch, optimizer state_dict
-        is_best: (bool) True if it is the best model seen till now
-        checkpoint: (string) folder where parameters are to be saved
-    """
-    filepath = os.path.join(checkpoint, 'last.pth')
-    if not os.path.exists(checkpoint):
-        print("Checkpoint Directory does not exist! Making directory {}".format(checkpoint))
-        os.mkdir(checkpoint)
-    torch.save(state, filepath)
-    if is_best:
-        shutil.copyfile(filepath, os.path.join(checkpoint, 'best.pth'))
+def load_checkpoint(filename, dir_path, model):
+    file_path = os.path.join(dir_path, filename)
+    if not os.path.exists(file_path):
+        raise f"{file_path} does not exist"
+
+    print("loading %s" % filename)
+    checkpoint = torch.load(file_path)
+    model.load_state_dict(checkpoint["state_dict"])
+    epoch = checkpoint["epoch"]
+    train_loss = checkpoint["train_loss"]
+    val_loss = checkpoint["val_loss"]
+    print(f"epoch {epoch}, train_loss={train_loss}, val_loss={val_loss}")
+    return epoch
 
 
-def load_checkpoint(checkpoint, model, optimizer=None):
-    """Loads model parameters (state_dict) from file_path. If optimizer is provided, loads state_dict of
-    optimizer assuming it is present in checkpoint.
+def save_checkpoint(filename, dir_path, model, epoch, train_loss, val_loss):
+    if not os.path.exists(dir_path):
+        os.mkdir(dir_path)
 
-    Args:
-        checkpoint: (string) filename which needs to be loaded
-        model: (torch.nn.Module) model for which the parameters are loaded
-        optimizer: (torch.optim) optional: resume optimizer from checkpoint
-    """
-    if not os.path.exists(checkpoint):
-        raise ("File doesn't exist {}".format(checkpoint))
-    checkpoint = torch.load(checkpoint)
-    model.load_state_dict(checkpoint['state_dict'])
-
-    if optimizer:
-        optimizer.load_state_dict(checkpoint['optim_dict'])
-
-    return checkpoint
+    checkpoint = {"state_dict": model.state_dict(), "epoch": epoch, "train_loss": train_loss, "val_loss": val_loss}
+    file_path = os.path.join(dir_path, filename + ".epoch%d" % epoch)
+    torch.save(checkpoint, file_path)
+    print("saved %s" % filename)
